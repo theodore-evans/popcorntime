@@ -750,6 +750,22 @@ const FileServer = require("./fileserver");
 
             win.info(total + ' subtitles found');
 
+            // Register remote URLs with subtitle server and rewrite to local proxy URLs
+            // Keep original URLs for direct download (used by ext_player subtitle download)
+            var originalUrls = {};
+            if (total > 0) {
+                for (var lang in subtitles) {
+                    originalUrls[lang] = subtitles[lang];
+                }
+                App.SubtitlesServer.setSubtitleUrls(originalUrls);
+                App.SubtitlesServer.ensureStarted();
+                var proxied = {};
+                for (lang in subtitles) {
+                    proxied[lang] = 'http://127.0.0.1:9999/proxy/' + encodeURIComponent(lang) + '.vtt';
+                }
+                subtitles = proxied;
+            }
+
             if (this.torrentModel) {
                 this.torrentModel.set('subtitle', subtitles);
             }
@@ -796,9 +812,9 @@ const FileServer = require("./fileserver");
 
                     }.bind(this));
 
-                    // download the subtitle
+                    // download the subtitle (use original remote URL, not proxied)
                     App.vent.trigger('subtitle:download', {
-                        url: subtitles[defaultSubtitle],
+                        url: originalUrls[defaultSubtitle] || subtitles[defaultSubtitle],
                         path: this.torrentModel.get('video_file').path,
                         lang: this.torrentModel.get('defaultSubtitle')
                     });
