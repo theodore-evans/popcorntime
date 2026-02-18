@@ -198,9 +198,16 @@
                 }
                 var subSwitch = getPlayerSubSwitch(this.get('id')).trim();
                 if (subSwitch) {
-                    args.push(subSwitch);
+                    // --sub-file=/path (= glued) vs -sub /path (space separated)
+                    if (subSwitch.endsWith('=')) {
+                        args.push(subSwitch + subtitle);
+                    } else {
+                        args.push(subSwitch);
+                        args.push(subtitle);
+                    }
+                } else {
+                    args.push(subtitle);
                 }
-                args.push(subtitle);
             }
 
             if (getPlayerFS(this.get('id')) !== '' && Settings.alwaysFullscreen) {
@@ -215,18 +222,23 @@
                 if (videoFile) {
                     var fnSwitch = getPlayerFilenameSwitch(this.get('id')).trim();
                     if (fnSwitch) {
-                        args.push(fnSwitch);
+                        // --meta-title=Name (= glued) vs -file-name Name (space separated)
+                        if (fnSwitch.endsWith('=')) {
+                            args.push(fnSwitch + videoFile.name);
+                        } else {
+                            args.push(fnSwitch);
+                            args.push(videoFile.name);
+                        }
                     }
-                    args.push(videoFile.name);
                 }
             }
 
             var urlSwitch = getPlayerUrlSwitch(this.get('id')).trim();
             if (urlSwitch) {
+                // -url http://... (space separated)
                 args.push(urlSwitch);
             }
 
-            // BSPlayer needs url before other args — handled naturally since url is appended here
             args.push(url);
 
             win.info('Launching External Player:', exe, args);
