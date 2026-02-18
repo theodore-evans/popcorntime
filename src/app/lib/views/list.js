@@ -352,10 +352,10 @@
             this.addloadmore();
 
             this.AddGhostsToBottomRow();
+            var addghostTimer;
             $(window).resize(function () {
-                var addghost;
-                clearTimeout(addghost);
-                addghost = setTimeout(function () {
+                clearTimeout(addghostTimer);
+                addghostTimer = setTimeout(function () {
                     self.AddGhostsToBottomRow();
                 }, 100);
             });

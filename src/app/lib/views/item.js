@@ -42,14 +42,14 @@
             this.setCoverStates();
             this.setTooltips();
 
-            $('.tooltipped').tooltip({
+            this.$('.tooltipped').tooltip({
                 delay: {
                     'show': 800,
                     'hide': 100
                 }
             });
 
-            $('.providerinfo').tooltip({
+            this.$('.providerinfo').tooltip({
                 delay: {
                     'show': 2400,
                     'hide': 100
@@ -169,7 +169,7 @@
             }
         },
 
-        loadImage: function () {
+        loadImage: async function () {
             var noimg = 'images/posterholder.png';
             var poster = this.model.get('image');
             if (!poster && this.model.get('images') && this.model.get('images').poster){
@@ -179,21 +179,13 @@
             } else {
                 var imdb = this.model.get('imdb_id'),
                 api_key = Settings.tmdb.api_key,
-                movie = (function () {
-                    var tmp = null;
-                    $.ajax({
-                        url: 'https://api.themoviedb.org/3/movie/' + imdb + '?api_key=' + api_key + '&append_to_response=videos',
-                        type: 'get',
-                        dataType: 'json',
-                        timeout: 5000,
-                        async: false,
-                        global: false,
-                        success: function (data) {
-                            tmp = data;
-                        }
-                    });
-                    return tmp;
-                }());
+                movie = await $.ajax({
+                    url: 'https://api.themoviedb.org/3/movie/' + imdb + '?api_key=' + api_key + '&append_to_response=videos',
+                    type: 'get',
+                    dataType: 'json',
+                    timeout: 5000,
+                    global: false
+                }).catch(function() { return null; });
                 poster = movie && movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : noimg;
                 this.model.set('poster', poster);
                 !this.model.get('synopsis') && movie && movie.overview ? this.model.set('synopsis', movie.overview) : null;

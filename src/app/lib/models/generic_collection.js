@@ -75,7 +75,7 @@
 
                 torrentProvider.loading = true;
                 return getDataFromProvider(providers, self)
-                    .then(torrentProvider.loading = false)
+                    .then(function () { torrentProvider.loading = false; })
                     .then(function (torrents) {
                         // set state, can't fail
                         if (torrents.results.length !== 0) {

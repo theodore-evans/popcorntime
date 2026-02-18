@@ -65,6 +65,7 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
     const maxChecksWhenNoSeeds = 3;
     let zeroSeedCheckCount = 0;
     let pendingRender = null;
+    let isRetrying = false;
     const getIcon = () => {
         return $(selector);
     };
@@ -97,9 +98,10 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
             }
             const seeds = Math.max.apply(Math, res.extra.map(function(o) { return o.seeds || 0; }));
             const peers = Math.max.apply(Math, res.extra.map(function(o) { return o.peers || 0; }));
-            if (seeds === 0 && zeroSeedCheckCount < maxChecksWhenNoSeeds) {
+            if (seeds === 0 && zeroSeedCheckCount < maxChecksWhenNoSeeds && !isRetrying) {
                 zeroSeedCheckCount++;
-                getIcon().click();
+                isRetrying = true;
+                setTimeout(() => { isRetrying = false; this.render(); }, 2000);
             } else {
                 zeroSeedCheckCount = 0;
                 const healthValue = Common.calcHealth({seed: seeds, peer: peers});

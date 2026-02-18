@@ -271,7 +271,7 @@ var AdvSettings = {
   },
 
   set: function(variable, newValue) {
-    Database.writeSetting({
+    return Database.writeSetting({
       key: variable,
       value: newValue
     }).then(function() {

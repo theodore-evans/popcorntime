@@ -109,7 +109,7 @@
                         <i class="fa fa-pause watched pause-torrent tooltipped" id="resume-${torrent.infoHash}" title="Pause" data-toggle="tooltip" data-container="body" data-placement="top" style="display: ${torrent.paused ? 'none' : ''};"></i>
                         <i class="fa fa-play watched resume-torrent tooltipped" id="play-${torrent.infoHash}" title="Resume" data-toggle="tooltip" data-container="body" data-placement="top" style="display: ${torrent.paused ? '' : 'none'};"></i>
                     </span>
-                    <div id="title-${torrent.infoHash}">${App.plugins.mediaName.getMediaName(torrent)}</div>
+                    <div id="title-${torrent.infoHash}">${_.escape(App.plugins.mediaName.getMediaName(torrent))}</div>
                 </a>
                 <i class="fa fa-download watched" id="download-${torrent.infoHash}" style="margin-right:14px">0 Kb/s</i>
                 <i class="fa fa-upload watched" id="upload-${torrent.infoHash}">0 Kb/s</i>
@@ -477,13 +477,17 @@
                     if (!file.hidden && (file.done || torrent._selections.some(function (el) { return el.from === file._startPiece || el.to === file._endPiece; }))) {
                         selected = true;
                     }
-                    $fileList.append(`<li class="file-item tooltipped${ selected ? '' : ' unselected' }">
-                        <a class="tooltipped" data-titleholder="${file.name.replace(/\./g, '.\u200B')}" data-container="body" data-toggle="tooltip" data-placement="top" onmouseenter="if (this.offsetWidth < this.scrollWidth) { $(this).attr('data-original-title', $(this).attr('data-titleholder')); } else { $(this).attr('data-original-title', ''); }">${file.name}</a>
-                        <i class="fa fa-play item-play tooltipped" title="Watch Now" data-container="body" data-toggle="tooltip" data-placement="left"></i>
-                        <i class="fa fa-download item-download tooltipped" title="Download" data-container="body" data-toggle="tooltip" data-placement="top"${ selected ? ' style="display:none"' : '' }></i>
-                        <i class="fa fa-trash item-remove tooltipped" title="Remove" data-container="body" data-toggle="tooltip" data-placement="top"${ selected ? '' : ' style="display:none"' }></i>
-                        <span class="filesize">${Common.fileSize(file.length)}</span>
-                    </li>`);
+                    var $li = $('<li>').addClass('file-item tooltipped' + (selected ? '' : ' unselected'));
+                    var $a = $('<a>').addClass('tooltipped')
+                        .attr({'data-titleholder': file.name.replace(/\./g, '.\u200B'), 'data-filename': file.name, 'data-container': 'body', 'data-toggle': 'tooltip', 'data-placement': 'top'})
+                        .text(file.name)
+                        .on('mouseenter', function() { if (this.offsetWidth < this.scrollWidth) { $(this).attr('data-original-title', $(this).attr('data-titleholder')); } else { $(this).attr('data-original-title', ''); } });
+                    $li.append($a);
+                    $li.append($('<i>').addClass('fa fa-play item-play tooltipped').attr({'title': 'Watch Now', 'data-container': 'body', 'data-toggle': 'tooltip', 'data-placement': 'left'}));
+                    $li.append($('<i>').addClass('fa fa-download item-download tooltipped').attr({'title': 'Download', 'data-container': 'body', 'data-toggle': 'tooltip', 'data-placement': 'top'}).css('display', selected ? 'none' : ''));
+                    $li.append($('<i>').addClass('fa fa-trash item-remove tooltipped').attr({'title': 'Remove', 'data-container': 'body', 'data-toggle': 'tooltip', 'data-placement': 'top'}).css('display', selected ? '' : 'none'));
+                    $li.append($('<span>').addClass('filesize').text(Common.fileSize(file.length)));
+                    $fileList.append($li);
                 }
                 if (totalfiles < 2) {
                     $('.seedbox .file-item a').css('width', 'calc(100% - 22px)');
@@ -511,8 +515,8 @@
                     totalSize = totalSize + file.length;
                     totalDownloaded = totalDownloaded + file.downloaded;
                     try {
-                        const thisElement = document.evaluate(`//a[text()='${file.name}']`, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.parentNode.childNodes[9];
-                        $(thisElement).html(Common.fileSize(file.downloaded) + ' / ' + Common.fileSize(file.length));
+                        var $fileEl = $fileList.find('a[data-filename="' + CSS.escape(file.name) + '"]').closest('.file-item').find('.filesize');
+                        $fileEl.text(Common.fileSize(file.downloaded) + ' / ' + Common.fileSize(file.length));
                     } catch(err) {}
                 }
             }

@@ -323,7 +323,7 @@
             server.expose('setplayer', function (args, opt, callback) {
                 args = Object.values(args);
                 if (args.length > 0) {
-                    var el = $('.playerchoicemenu li#player-' + args[0] + ' a');
+                    var el = $('.playerchoicemenu li').filter(function() { return this.id === 'player-' + args[0]; }).find('a');
                     if (el.length > 0) {
                         App.Device.Collection.setDevice(args[0]);
                         $('.playerchoicemenu li a.active').removeClass('active');

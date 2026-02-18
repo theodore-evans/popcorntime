@@ -107,7 +107,13 @@
         this.icons.getLink(provider, torrent.provider)
             .then((icon) => torrent.icon = icon || '/src/app/images/icons/' + torrent.provider + '.png')
             .catch((error) => { !torrent.icon ? torrent.icon = '/src/app/images/icons/' + torrent.provider + '.png' : null; })
-            .then(() => $('.source-link').html(`<img src="${torrent.icon}" onerror="this.onerror=null; this.style.display='none'; this.parentElement.style.top='0'; this.parentElement.classList.add('fas', 'fa-link')" onload="this.onerror=null; this.onload=null;">`));
+            .then(function() {
+                var img = document.createElement('img');
+                img.onerror = function() { this.onerror = null; this.style.display = 'none'; this.parentElement.style.top = '0'; this.parentElement.classList.add('fas', 'fa-link'); };
+                img.onload = function() { this.onerror = null; this.onload = null; };
+                img.src = torrent.icon;
+                $('.source-link').empty().append(img);
+            });
         $('.source-link').show().attr('data-original-title', torrent.source.split('//').pop().split('/')[0]);
       } else {
         $('.source-link').html('');
@@ -216,26 +222,18 @@
       }
     },
 
-    getMetaData: function () {
+    getMetaData: async function () {
       curSynopsis.vstatus = false;
       var imdb = this.model.get('imdb_id'),
       api_key = Settings.tmdb.api_key,
       lang = Settings.language,
-      movie = (function () {
-        var tmp = null;
-        $.ajax({
+      movie = await $.ajax({
           url: 'https://api.themoviedb.org/3/movie/' + imdb + '?api_key=' + api_key + '&language=' + lang + '&append_to_response=videos,credits',
           type: 'get',
           dataType: 'json',
           timeout: 5000,
-          async: false,
-          global: false,
-          success: function (data) {
-            tmp = data;
-          }
-        });
-        return tmp;
-      }());
+          global: false
+        }).catch(function() { return null; });
       (!this.model.get('synopsis') || (Settings.translateSynopsis && Settings.language !== 'en')) && movie && movie.overview ? this.model.set('synopsis', movie.overview) : null;
       (!this.model.get('rating') || this.model.get('rating') === '0' || this.model.get('rating') === '0.0') && movie && movie.vote_average ? this.model.set('rating', movie.vote_average) : null;
       (!this.model.get('runtime') || this.model.get('runtime') === '0') && movie && movie.runtime ? this.model.set('runtime', movie.runtime) : null;
@@ -257,21 +255,13 @@
       }
       // Fallback to english when source and TMDb call in default language that is other than english fail to fetch synopsis
       if (!this.model.get('synopsis') && Settings.language !== 'en') {
-        movie = (function () {
-          var tmp = null;
-          $.ajax({
+        movie = await $.ajax({
             url: 'https://api.themoviedb.org/3/movie/' + imdb + '?api_key=' + api_key,
             type: 'get',
             dataType: 'json',
             timeout: 5000,
-            async: false,
-            global: false,
-            success: function (data) {
-              tmp = data;
-            }
-          });
-          return tmp;
-        }());
+            global: false
+          }).catch(function() { return null; });
         movie && movie.overview ? this.model.set('synopsis', movie.overview) : null;
       }
     },
@@ -423,27 +413,19 @@
       }
     },
 
-    openTmdb: function(e) {
+    openTmdb: async function(e) {
       let imdb = this.model.get('imdb_id'),
       tmdb = this.model.get('tmdb_id'),
       api_key = Settings.tmdb.api_key;
 
       if (!tmdb && !this.model.get('getmetarunned')) {
-        let movie = (function () {
-          let tmp = null;
-          $.ajax({
+        let movie = await $.ajax({
             url: 'https://api.themoviedb.org/3/find/' + imdb + '?api_key=' + api_key + '&external_source=imdb_id',
             type: 'get',
             dataType: 'json',
             timeout: 5000,
-            async: false,
-            global: false,
-            success: function (data) {
-              tmp = data;
-            }
-          });
-          return tmp;
-        }());
+            global: false
+          }).catch(function() { return null; });
         movie && movie.movie_results && movie.movie_results[0] && movie.movie_results[0].id ? this.model.set('tmdb_id', movie.movie_results[0].id) : null;
         tmdb = this.model.get('tmdb_id');
       }

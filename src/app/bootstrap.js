@@ -23,10 +23,25 @@
           script.type = 'text/javascript';
           script.src = 'lib/providers/' + file;
 
+          var timeout = setTimeout(function() {
+            win.error('Provider script timed out:', file);
+            resolve(null);
+          }, 10000);
+
           script.onload = function() {
+            clearTimeout(timeout);
             script.onload = null;
+            script.onerror = null;
             win.info('Loaded local provider:', file);
             resolve(file);
+          };
+
+          script.onerror = function() {
+            clearTimeout(timeout);
+            script.onload = null;
+            script.onerror = null;
+            win.error('Failed to load provider:', file);
+            resolve(null);
           };
 
           head.appendChild(script);

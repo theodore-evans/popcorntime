@@ -139,13 +139,13 @@
         },
 
         syncAll: function(watchlist) {
-            Database.deleteWatched();
-
-            return Promise.all([
-                this.syncMovies(),
-                this.syncEpisodes(),
-                App.Providers.get('Watchlist').fetch({force: watchlist})
-            ]).then(function() {
+            return Database.deleteWatched().then(function() {
+                return Promise.all([
+                    this.syncMovies(),
+                    this.syncEpisodes(),
+                    App.Providers.get('Watchlist').fetch({force: watchlist})
+                ]);
+            }.bind(this)).then(function() {
                 AdvSettings.set('traktLastSync', Date.now());
                 return true;
             }).catch(function(error) {

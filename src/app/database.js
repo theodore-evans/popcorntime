@@ -38,8 +38,6 @@ db.movies.ensureIndex({
     fieldName: 'imdb_id',
     unique: true
 });
-db.movies.removeIndex('imdb_id');
-db.movies.removeIndex('tmdb_id');
 db.bookmarks.ensureIndex({
     fieldName: 'imdb_id',
     unique: true
@@ -73,6 +71,12 @@ var Database = {
     getMovie: function (imdb_id) {
         return db.movies.findOne({
             imdb_id: imdb_id
+        });
+    },
+
+    getMoviesByIds: function (imdb_ids) {
+        return db.movies.find({
+            imdb_id: { $in: imdb_ids }
         });
     },
 
@@ -273,6 +277,12 @@ var Database = {
 
         return db.tvshows.findOne({
             _id: data.tvdb_id
+        });
+    },
+
+    getTVShowsByIds: function (imdb_ids) {
+        return db.tvshows.find({
+            imdb_id: { $in: imdb_ids }
         });
     },
 

@@ -69,9 +69,9 @@
             };
 
             //If a child was added above this view
-            App.vent.on('viewstack:push', function() {
+            this.listenTo(App.vent, 'viewstack:push', function() {
                 if (_.last(App.ViewStack) !== 'app-overlay') {
-                    _this.unbindKeyboardShortcuts();
+                    this.unbindKeyboardShortcuts();
                     if (win.isFullscreen) {
                         $('.player .video-js').hide();
                         this.wasFullscreen = true;
@@ -80,9 +80,9 @@
             });
 
             //If a child was removed from above this view
-            App.vent.on('viewstack:pop', function() {
+            this.listenTo(App.vent, 'viewstack:pop', function() {
                 if (_.last(App.ViewStack) === 'app-overlay') {
-                    _this.bindKeyboardShortcuts();
+                    this.bindKeyboardShortcuts();
                     if (this.wasFullscreen) {
                         $('.player .video-js').removeAttr('style');
                         this.wasFullscreen = false;
