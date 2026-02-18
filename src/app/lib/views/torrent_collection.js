@@ -406,14 +406,19 @@
 
         onlineAddItem: function (item, provider) {
             if (!provider || item.provider === provider) {
-                $('.onlinesearch-info>ul.file-list').append(
-                    '<li class="result-item" data-index="' + item.index + '" data-file="' + item.magnet + '" data-source="' + item.url + '">'+
-                        '<a>' + item.title + '</a>'+
-                        '<div class="item-icon magnet-icon tooltipped" data-toggle="tooltip" data-placement="left" title="' + item.provider + '"><img src="/src/app/images/icons/' + item.icon + '.png"></div>'+
-                        '<div class="online-health tooltipped" title="' + i18n.__('Seeds') + ' &nbsp;/&nbsp; ' + i18n.__('Peers') + '" data-toggle="tooltip" data-container="body" data-placement="top">'+item.seeds+' / '+item.peers+'</div>'+
-                        '<div class="online-size">'+item.size+'</div>'+
-                    '</li>'
-                );
+                var $li = $('<li class="result-item">').attr({
+                    'data-index': item.index,
+                    'data-file': item.magnet,
+                    'data-source': item.url
+                });
+                $li.append($('<a>').text(item.title));
+                var iconSrc = '/src/app/images/icons/' + String(item.icon).replace(/[^a-zA-Z0-9_-]/g, '') + '.png';
+                var $iconDiv = $('<div class="item-icon magnet-icon tooltipped" data-toggle="tooltip" data-placement="left">').attr('title', item.provider);
+                $iconDiv.append($('<img>').attr('src', iconSrc));
+                $li.append($iconDiv);
+                $li.append($('<div class="online-health tooltipped" data-toggle="tooltip" data-container="body" data-placement="top">').attr('title', i18n.__('Seeds') + ' \u00a0/\u00a0 ' + i18n.__('Peers')).text(Number(item.seeds) + ' / ' + Number(item.peers)));
+                $li.append($('<div class="online-size">').text(item.size));
+                $('.onlinesearch-info>ul.file-list').append($li);
             }
         },
 

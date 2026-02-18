@@ -563,7 +563,7 @@ const FileServer = require("./fileserver");
                 }
 
                 try {
-                    this.torrentModel.get('torrent').createServer().listen(serverPort);
+                    this.torrentModel.get('torrent').createServer({ hostname: '127.0.0.1' }).listen(serverPort, '127.0.0.1');
 
                     var url = 'http://127.0.0.1:' + serverPort + '/' + this.torrentModel.get('video_file').index;
 
@@ -589,8 +589,8 @@ const FileServer = require("./fileserver");
                 }
 
                 try {
-                    const server = new FileServer(file, serverPort);
-                    server.listen(serverPort);
+                    const server = new FileServer(file, { hostname: '127.0.0.1' });
+                    server.listen(serverPort, '127.0.0.1');
 
                     this.torrentModel.get('torrent').set('server', server);
 

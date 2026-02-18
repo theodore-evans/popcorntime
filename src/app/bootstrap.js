@@ -49,9 +49,14 @@
     });
   }
 
+  // Allowlists for dynamic package loading — prevents arbitrary package execution
+  var ALLOWED_PROVIDERS = ['butter-provider'];
+  var ALLOWED_SETTINGS = ['butter-settings-popcorntime.app'];
+
   function loadFromPackageJSON(regex, fn) {
+    var allowlist = regex.toString().indexOf('butter-provider') !== -1 ? ALLOWED_PROVIDERS : ALLOWED_SETTINGS;
     var packages = Object.keys(pkJson.dependencies).filter(function(p) {
-      return p.match(regex);
+      return p.match(regex) && allowlist.some(function(allowed) { return p === allowed || p.indexOf(allowed) === 0; });
     });
 
     return packages.map(function(name) {
@@ -68,10 +73,22 @@
     return loadFromPackageJSON(/butter-provider-/, App.Providers.install);
   }
 
+  // Only allow known settings keys from external packages
+  var ALLOWED_SETTINGS_KEYS = [
+    'projectName', 'projectUrl', 'projectBlog', 'projectForum', 'statusUrl',
+    'changelogUrl', 'issuesUrl', 'sourceUrl', 'commitUrl',
+    'dht', 'providers', 'opensubtitles', 'fanart', 'tvdb', 'tmdb',
+    'updateKey', 'homepageRecent', 'homepageFavorite', 'homepageWatchedList'
+  ];
+
   function loadNpmSettings() {
     return Promise.all(
       loadFromPackageJSON(/butter-settings-/, function(settings) {
-        Settings = _.extend(Settings, settings);
+        var filtered = {};
+        ALLOWED_SETTINGS_KEYS.forEach(function(key) {
+          if (settings.hasOwnProperty(key)) { filtered[key] = settings[key]; }
+        });
+        Settings = _.extend(Settings, filtered);
       })
     );
   }

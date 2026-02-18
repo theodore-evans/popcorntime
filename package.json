@@ -22,7 +22,7 @@
     "test": "gulp test",
     "postinstall": "patch-package"
   },
-  "chromium-args": "--enable-node-worker --no-sandbox",
+  "chromium-args": "",
   "engines": {
     "yarn": ">= 1.0.0"
   },
@@ -82,7 +82,7 @@
     "readdirp": "2.x.x",
     "request": "2.88.x",
     "rimraf": "^3.0.0",
-    "sanitizer": "0.x.x",
+    "dompurify": "^3.0.0",
     "semver": "^7.5",
     "send": "^0.19.0",
     "socks-proxy-agent": "^6.2.1",

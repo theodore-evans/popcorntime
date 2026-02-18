@@ -183,8 +183,9 @@ Common.fileSize = function (num) {
 };
 
 Common.sanitize = function (input) {
+    var DOMPurify = require('dompurify');
     function sanitizeString(string) {
-        return require('sanitizer').sanitize(string);
+        return DOMPurify.sanitize(string, {ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br', 'p', 'span'], ALLOWED_ATTR: ['class']});
     }
     function sanitizeObject(obj) {
         var result = obj;
@@ -205,6 +206,20 @@ Common.sanitize = function (input) {
         output = sanitizeString(input);
     }
     return output;
+};
+
+// Safe wrapper for nw.Shell.openExternal — blocks dangerous protocols
+Common.safeOpenExternal = function (url) {
+    try {
+        var parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            win.warn('Blocked openExternal with protocol:', parsed.protocol);
+            return;
+        }
+        nw.Shell.openExternal(url);
+    } catch(e) {
+        win.warn('Blocked openExternal with invalid URL:', url);
+    }
 };
 
 Common.normalize = (function () {
@@ -279,7 +294,7 @@ Common.openOrClipboardLink = function(e, link, text, noOpen = false, noCopy = fa
         ;
     }
     if (e.button === 0 && !noOpen) {
-        nw.Shell.openExternal(link);
+        Common.safeOpenExternal(link);
     }
 };
 

@@ -14,9 +14,7 @@
         var sub_uri = '/' + path.basename(sub_path);
 
         var headers = function (res, path, stat) {
-            if (req.headers.origin) {
-                res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-            }
+            res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1');
             res.setHeader('Content-Type', 'text/' + ext + ';charset=' + encoding);
         };
 
@@ -34,7 +32,7 @@
     });
 
     function startListening(cb) {
-        httpServer = server.listen(PORT);
+        httpServer = server.listen(PORT, '127.0.0.1');
 
 
     }

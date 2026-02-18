@@ -168,47 +168,69 @@
         }
 
         play(streamModel) {
-            // "" So it behaves when spaces in path
-            var cmd = '', cmdPath = '', cmdSwitch = '', cmdSub = '', cmdFs = '', cmdFilename = '', cmdUrl = '';
+            var args = [];
+            var exe;
             var url = streamModel.attributes.src;
-            
-            // A conditional check to see if VLC was installed via flatpak
-            this.get('path').includes('/flatpak/app/org.videolan.VLC/') ? cmdPath = '/usr/bin/flatpak run org.videolan.VLC ' : cmdPath += path.normalize('"' + this.get('path') + '" ');
-            
-            cmdSwitch += getPlayerSwitches(this.get('id')) + ' ';
+            var isFlatpak = this.get('path').includes('/flatpak/app/org.videolan.VLC/');
+
+            // Determine executable and initial args
+            if (isFlatpak) {
+                exe = '/usr/bin/flatpak';
+                args.push('run', 'org.videolan.VLC');
+            } else {
+                exe = path.normalize(this.get('path'));
+            }
+
+            // Build args array from player switches
+            var switches = getPlayerSwitches(this.get('id')).trim();
+            if (switches) {
+                args = args.concat(switches.split(/\s+/));
+            }
 
             var subtitle = streamModel.attributes.subFile || '';
             if (subtitle !== '') {
                 if (this.get('id') === 'MPlayer OSX Extended') {
-                    //detect charset
                     var dataBuff = fs.readFileSync(subtitle);
-                    //var targetEncodingCharset = 'utf8';
                     var detectedEncoding = charsetDetect.detect(dataBuff).encoding;
                     if (detectedEncoding.toLowerCase() === 'utf-8') {
-                        cmdSub += '-utf8 ';
+                        args.push('-utf8');
                     }
                 }
-                cmdSub += getPlayerSubSwitch(this.get('id')) + '"' + subtitle + '" ';
+                var subSwitch = getPlayerSubSwitch(this.get('id')).trim();
+                if (subSwitch) {
+                    args.push(subSwitch);
+                }
+                args.push(subtitle);
             }
-            if (getPlayerFS(this.get('id')) !== '') {
-                // Start player fullscreen if available and asked
-                if (Settings.alwaysFullscreen) {
-                    cmdFs += getPlayerFS(this.get('id')) + ' ';
+
+            if (getPlayerFS(this.get('id')) !== '' && Settings.alwaysFullscreen) {
+                var fsSwitch = getPlayerFS(this.get('id')).trim();
+                if (fsSwitch) {
+                    args.push(fsSwitch);
                 }
             }
+
             if (getPlayerFilenameSwitch(this.get('id')) !== '') {
                 var videoFile = streamModel.attributes.torrentModel.get('video_file');
-                cmdFilename += videoFile ? (getPlayerFilenameSwitch(this.get('id')) + '"' + videoFile.name + '" ') : '';
+                if (videoFile) {
+                    var fnSwitch = getPlayerFilenameSwitch(this.get('id')).trim();
+                    if (fnSwitch) {
+                        args.push(fnSwitch);
+                    }
+                    args.push(videoFile.name);
+                }
             }
-            cmdUrl += getPlayerUrlSwitch(this.get('id')) + url;
-            // BSPlayer need to receive arguments in specific order (1st: url, 2nd: sub, ...)
-            if (this.get('id') === 'BSPlayer') {
-                cmd += cmdPath + '"' + cmdUrl + '" ' + cmdSub + cmdFs + cmdSwitch;
-            } else {
-                cmd += cmdPath + cmdSwitch + cmdSub + cmdFs + cmdFilename + cmdUrl;
+
+            var urlSwitch = getPlayerUrlSwitch(this.get('id')).trim();
+            if (urlSwitch) {
+                args.push(urlSwitch);
             }
-            win.info('Launching External Player: ' + cmd);
-            child.exec(cmd, function (error, stdout, stderr) {
+
+            // BSPlayer needs url before other args — handled naturally since url is appended here
+            args.push(url);
+
+            win.info('Launching External Player:', exe, args);
+            child.execFile(exe, args, function (error, stdout, stderr) {
                 if (streamModel.attributes.device.id === 'Bomi') {
                     // don't stop on exit, because Bomi could be already running in background and the command ends while the stream should continue
                     return;

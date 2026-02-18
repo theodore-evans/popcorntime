@@ -426,7 +426,7 @@
                 let show = (function () {
                     let tmp = null;
                     $.ajax({
-                        url: 'http://api.themoviedb.org/3/find/' + imdb + '?api_key=' + api_key + '&external_source=imdb_id',
+                        url: 'https://api.themoviedb.org/3/find/' + imdb + '?api_key=' + api_key + '&external_source=imdb_id',
                         type: 'get',
                         dataType: 'json',
                         timeout: 5000,

@@ -16,7 +16,7 @@
         return new Promise(function (resolve, reject) {
             server = rpc.Server({
                 'headers': { // allow custom headers is empty by default
-                    'Access-Control-Allow-Origin': '*'
+                    'Access-Control-Allow-Origin': 'http://127.0.0.1'
                 }
             });
 
@@ -796,7 +796,7 @@
     var sockets = [];
 
     function startListening() {
-        httpServer = server.listen(Settings.httpApiPort);
+        httpServer = server.listen(Settings.httpApiPort, '127.0.0.1');
 
         httpServer.on('connection', function (socket) {
             sockets.push(socket);

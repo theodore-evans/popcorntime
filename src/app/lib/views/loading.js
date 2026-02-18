@@ -367,11 +367,9 @@
       var reserved = (size * 20) / 100;
       reserved = reserved > 0.25 ? 0.25 : reserved;
       var minspace = size + reserved;
-      var cmd;
       if (process.platform === 'win32') {
         var drive = Settings.tmpLocation.substr(0, 2);
-        cmd = 'dir /-C ' + drive;
-        child.exec(cmd, function(error, stdout, stderr) {
+        child.execFile('cmd', ['/c', 'dir', '/-C', drive], function(error, stdout, stderr) {
           if (error) {
             return;
           }
@@ -386,15 +384,18 @@
           }
         });
       } else {
-        var path = Settings.tmpLocation;
-        cmd = 'df -Pk "' + path + '" | awk \'NR==2 {print $4}\'';
-        child.exec(cmd, function(error, stdout, stderr) {
+        var tmpPath = Settings.tmpLocation;
+        child.execFile('df', ['-Pk', tmpPath], function(error, stdout, stderr) {
           if (error) {
             return;
           }
-          var freespace = stdout.replace(/\D/g, '') / (1024 * 1024);
-          if (freespace < minspace) {
-            $('#player .warning-nospace').css('display', 'block');
+          var lines = stdout.trim().split('\n');
+          if (lines.length >= 2) {
+            var available = lines[1].split(/\s+/)[3];
+            var freespace = parseInt(available, 10) / (1024 * 1024);
+            if (!isNaN(freespace) && freespace < minspace) {
+              $('#player .warning-nospace').css('display', 'block');
+            }
           }
         });
       }
