@@ -7,6 +7,14 @@
         curprovider,
         hidetooltps;
 
+    function safeCollectionPath(filename) {
+        var resolved = path.resolve(collection, filename);
+        if (!resolved.startsWith(path.resolve(collection) + path.sep) && resolved !== path.resolve(collection)) {
+            throw new Error('Path traversal detected: ' + filename);
+        }
+        return resolved;
+    }
+
     var TorrentCollection = Marionette.View.extend({
         template: '#torrent-collection-tpl',
         className: 'torrent-collection',
@@ -406,14 +414,19 @@
 
         onlineAddItem: function (item, provider) {
             if (!provider || item.provider === provider) {
-                $('.onlinesearch-info>ul.file-list').append(
-                    '<li class="result-item" data-index="' + item.index + '" data-file="' + item.magnet + '" data-source="' + item.url + '">'+
-                        '<a>' + item.title + '</a>'+
-                        '<div class="item-icon magnet-icon tooltipped" data-toggle="tooltip" data-placement="left" title="' + item.provider + '"><img src="/src/app/images/icons/' + item.icon + '.png"></div>'+
-                        '<div class="online-health tooltipped" title="' + i18n.__('Seeds') + ' &nbsp;/&nbsp; ' + i18n.__('Peers') + '" data-toggle="tooltip" data-container="body" data-placement="top">'+item.seeds+' / '+item.peers+'</div>'+
-                        '<div class="online-size">'+item.size+'</div>'+
-                    '</li>'
-                );
+                var $li = $('<li class="result-item">').attr({
+                    'data-index': item.index,
+                    'data-file': item.magnet,
+                    'data-source': item.url
+                });
+                $li.append($('<a>').text(item.title));
+                var iconSrc = '/src/app/images/icons/' + String(item.icon).replace(/[^a-zA-Z0-9_-]/g, '') + '.png';
+                var $iconDiv = $('<div class="item-icon magnet-icon tooltipped" data-toggle="tooltip" data-placement="left">').attr('title', item.provider);
+                $iconDiv.append($('<img>').attr('src', iconSrc));
+                $li.append($iconDiv);
+                $li.append($('<div class="online-health tooltipped" data-toggle="tooltip" data-container="body" data-placement="top">').attr('title', i18n.__('Seeds') + ' \u00a0/\u00a0 ' + i18n.__('Peers')).text(Number(item.seeds) + ' / ' + Number(item.peers)));
+                $li.append($('<div class="online-size">').text(item.size));
+                $('.onlinesearch-info>ul.file-list').append($li);
             }
         },
 
@@ -503,9 +516,9 @@
 
             if (_file.indexOf('.torrent') !== -1) {
                 Settings.droppedTorrent = file;
-                window.handleTorrent(collection + file);
+                window.handleTorrent(safeCollectionPath(file));
             } else { // assume magnet
-                var content = fs.readFileSync(collection + file, 'utf8');
+                var content = fs.readFileSync(safeCollectionPath(file), 'utf8');
                 Settings.droppedMagnet = content;
                 Settings.droppedStoredMagnet = file;
                 window.handleTorrent(content);
@@ -521,7 +534,7 @@
                 // stored
                 var _file = e.currentTarget.parentNode.innerText,
                     file = _file.substring(0, _file.length - 2); // avoid ENOENT
-                magnetLink = fs.readFileSync(collection + file, 'utf8');
+                magnetLink = fs.readFileSync(safeCollectionPath(file), 'utf8');
             } else {
                 // search result
                 magnetLink = e.currentTarget.parentNode.attributes['data-file'].value;
@@ -536,7 +549,7 @@
             e.stopPropagation();
             if (e.currentTarget.parentNode.className.indexOf('file-item') !== -1) {
                 let _file = e.currentTarget.parentNode.innerText;
-                let torrentFile = path.join(collection ,_file.substring(0, _file.length - 2)).toString(); // avoid ENOENT
+                let torrentFile = safeCollectionPath(_file.substring(0, _file.length - 2)); // avoid ENOENT
                 Common.openOrClipboardLink(e, torrentFile, i18n.__('torrent file'), false, true);
             }
         },
@@ -550,7 +563,7 @@
                 // stored
                 var _file = e.currentTarget.parentNode.innerText,
                     file = _file.substring(0, _file.length - 2); // avoid ENOENT
-                sourceLink = fs.readFileSync(collection + file, 'utf8');
+                sourceLink = fs.readFileSync(safeCollectionPath(file), 'utf8');
             } else {
                 // search result
                 sourceLink = e.currentTarget.parentNode.parentNode.attributes['data-source'].value;
@@ -570,7 +583,7 @@
 
             var delItem = function () {
                 App.vent.trigger('notification:close');
-                fs.unlinkSync(collection + file);
+                fs.unlinkSync(safeCollectionPath(file));
                 this.files = fs.readdirSync(collection);
                 this.render();
                 $('.notification_alert').stop().text(i18n.__('Torrent removed')).fadeIn('fast').delay(1500).fadeOut('fast');

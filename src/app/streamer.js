@@ -230,6 +230,7 @@ const FileServer = require("./fileserver");
             this.stateModel = null;
             this.streamInfo = null;
             this.subtitleReady = false;
+            this._subtitleFetchInProgress = false;
             this.canPlay = false;
             this.stopped = true;
             clearInterval(this.updateStatsInterval);
@@ -286,6 +287,7 @@ const FileServer = require("./fileserver");
             this.stateModel = null;
             this.streamInfo = null;
             this.subtitleReady = false;
+            this._subtitleFetchInProgress = false;
             this.canPlay = false;
             this.stopped = true;
             clearInterval(this.updateStatsInterval);
@@ -366,7 +368,7 @@ const FileServer = require("./fileserver");
                     }
                 }.bind(this));
 
-                App.WebTorrent.on('error', function (error) {
+                App.WebTorrent.once('error', function (error) {
                     win.error('WebTorrent fatal error', error);
                     this.stop();
                     reject(error);
@@ -553,8 +555,9 @@ const FileServer = require("./fileserver");
             return;
         },
 
-        createServer: function (port) {
-            return new Promise(function (resolve) {
+        createServer: function (port, retries) {
+            retries = retries || 0;
+            return new Promise(function (resolve, reject) {
                 var serverPort = parseInt((port || Settings.streamPort), 10);
 
 
@@ -563,7 +566,7 @@ const FileServer = require("./fileserver");
                 }
 
                 try {
-                    this.torrentModel.get('torrent').createServer().listen(serverPort);
+                    this.torrentModel.get('torrent').createServer({ hostname: '127.0.0.1' }).listen(serverPort, '127.0.0.1');
 
                     var url = 'http://127.0.0.1:' + serverPort + '/' + this.torrentModel.get('video_file').index;
 
@@ -572,15 +575,21 @@ const FileServer = require("./fileserver");
 
                     resolve(url);
                 } catch (e) {
+                    if (retries >= 10) {
+                        win.error('createServer: failed after 10 retries', e);
+                        reject(e);
+                        return;
+                    }
                     setTimeout(function () {
-                        return this.createServer(0).then(resolve);
+                        return this.createServer(0, retries + 1).then(resolve).catch(reject);
                     }.bind(this), 100);
                 }
             }.bind(this));
         },
 
-        createFileServer: function (file, port) {
-            return new Promise(function (resolve) {
+        createFileServer: function (file, port, retries) {
+            retries = retries || 0;
+            return new Promise(function (resolve, reject) {
                 var serverPort = parseInt((port || Settings.streamPort), 10);
 
 
@@ -589,8 +598,8 @@ const FileServer = require("./fileserver");
                 }
 
                 try {
-                    const server = new FileServer(file, serverPort);
-                    server.listen(serverPort);
+                    const server = new FileServer(file, { hostname: '127.0.0.1' });
+                    server.listen(serverPort, '127.0.0.1');
 
                     this.torrentModel.get('torrent').set('server', server);
 
@@ -601,8 +610,13 @@ const FileServer = require("./fileserver");
 
                     resolve(url);
                 } catch (e) {
+                    if (retries >= 10) {
+                        win.error('createFileServer: failed after 10 retries', e);
+                        reject(e);
+                        return;
+                    }
                     setTimeout(function () {
-                        return this.createFileServer(file, 0).then(resolve);
+                        return this.createFileServer(file, 0, retries + 1).then(resolve).catch(reject);
                     }.bind(this), 100);
                 }
             }.bind(this));
@@ -819,6 +833,10 @@ const FileServer = require("./fileserver");
             if (this.stopped && !this.downloadOnly && !this.preload) {
                 return;
             }
+            if (this._subtitleFetchInProgress) {
+                return;
+            }
+            this._subtitleFetchInProgress = true;
             // set default subtitle language (passed by a view or settings)
             var defaultSubtitle = this.torrentModel.get('defaultSubtitle') || Settings.subtitle_language;
             this.torrentModel.set('defaultSubtitle', defaultSubtitle);
@@ -827,8 +845,12 @@ const FileServer = require("./fileserver");
 
             subtitleProvider
                 .fetch(this.buildSubtitleQuery())
-                .then(this.onSubtitlesFound.bind(this))
+                .then(function (subs) {
+                    this._subtitleFetchInProgress = false;
+                    this.onSubtitlesFound(subs);
+                }.bind(this))
                 .catch(function (err) {
+                    this._subtitleFetchInProgress = false;
                     this.subtitleReady = true;
                     win.error('subtitleProvider.fetch()', err);
                     if (subtitle_retry === undefined) { subtitle_retry=0; }

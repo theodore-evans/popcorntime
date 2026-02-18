@@ -65,6 +65,7 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
     const maxChecksWhenNoSeeds = 3;
     let zeroSeedCheckCount = 0;
     let pendingRender = null;
+    let isRetrying = false;
     const getIcon = () => {
         return $(selector);
     };
@@ -97,9 +98,10 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
             }
             const seeds = Math.max.apply(Math, res.extra.map(function(o) { return o.seeds || 0; }));
             const peers = Math.max.apply(Math, res.extra.map(function(o) { return o.peers || 0; }));
-            if (seeds === 0 && zeroSeedCheckCount < maxChecksWhenNoSeeds) {
+            if (seeds === 0 && zeroSeedCheckCount < maxChecksWhenNoSeeds && !isRetrying) {
                 zeroSeedCheckCount++;
-                getIcon().click();
+                isRetrying = true;
+                setTimeout(() => { isRetrying = false; this.render(); }, 2000);
             } else {
                 zeroSeedCheckCount = 0;
                 const healthValue = Common.calcHealth({seed: seeds, peer: peers});
@@ -183,8 +185,9 @@ Common.fileSize = function (num) {
 };
 
 Common.sanitize = function (input) {
+    var DOMPurify = require('dompurify');
     function sanitizeString(string) {
-        return require('sanitizer').sanitize(string);
+        return DOMPurify.sanitize(string, {ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br', 'p', 'span'], ALLOWED_ATTR: ['class']});
     }
     function sanitizeObject(obj) {
         var result = obj;
@@ -205,6 +208,20 @@ Common.sanitize = function (input) {
         output = sanitizeString(input);
     }
     return output;
+};
+
+// Safe wrapper for nw.Shell.openExternal — blocks dangerous protocols
+Common.safeOpenExternal = function (url) {
+    try {
+        var parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            win.warn('Blocked openExternal with protocol:', parsed.protocol);
+            return;
+        }
+        nw.Shell.openExternal(url);
+    } catch(e) {
+        win.warn('Blocked openExternal with invalid URL:', url);
+    }
 };
 
 Common.normalize = (function () {
@@ -279,7 +296,7 @@ Common.openOrClipboardLink = function(e, link, text, noOpen = false, noCopy = fa
         ;
     }
     if (e.button === 0 && !noOpen) {
-        nw.Shell.openExternal(link);
+        Common.safeOpenExternal(link);
     }
 };
 

@@ -44,7 +44,7 @@
             return this.client.get_codes().then(function(poll) {
                 $('#authTraktCode input').val(poll.user_code); // settings_container.tpl code placeholder
                 nw.Clipboard.get().set(poll.user_code); // copy code to clipboad
-                nw.Shell.openExternal(poll.verification_url); // open remote URL
+                Common.safeOpenExternal(poll.verification_url); // open remote URL
 
                 return this.client.poll_access(poll); // wait for trakt response
             }.bind(this)).then(function(auth) {
@@ -139,13 +139,13 @@
         },
 
         syncAll: function(watchlist) {
-            Database.deleteWatched();
-
-            return Promise.all([
-                this.syncMovies(),
-                this.syncEpisodes(),
-                App.Providers.get('Watchlist').fetch({force: watchlist})
-            ]).then(function() {
+            return Database.deleteWatched().then(function() {
+                return Promise.all([
+                    this.syncMovies(),
+                    this.syncEpisodes(),
+                    App.Providers.get('Watchlist').fetch({force: watchlist})
+                ]);
+            }.bind(this)).then(function() {
                 AdvSettings.set('traktLastSync', Date.now());
                 return true;
             }).catch(function(error) {

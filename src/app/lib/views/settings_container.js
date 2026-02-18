@@ -1025,6 +1025,17 @@
                     try {
                         var zip = new AdmZip(content);
                         var targetFolder = App.settings['databaseLocation'] + '/';
+                        // Zip Slip protection: validate all entries before extraction
+                        var resolvedTarget = path.resolve(targetFolder);
+                        var zipEntries = zip.getEntries();
+                        for (var zi = 0; zi < zipEntries.length; zi++) {
+                            var entryPath = path.resolve(targetFolder, zipEntries[zi].entryName);
+                            if (!entryPath.startsWith(resolvedTarget + path.sep) && entryPath !== resolvedTarget) {
+                                throw new Error('Zip entry has path traversal: ' + zipEntries[zi].entryName);
+                            }
+                        }
+                        // Allowlist of safe entry names for database import
+                        var allowedEntries = ['bookmarks.db', 'movies.db', 'shows.db', 'settings.db', 'watched.db'];
                         for (const el of importTypes) {
                             switch (el.id) {
                                 case 'import-bookmarks':
@@ -1039,7 +1050,15 @@
                                     zip.getEntry('watched.db') ? zip.extractEntryTo('watched.db', targetFolder, false, true) : null;
                                 break;
                                 case 'import-torcol':
-                                    zip.getEntry('TorrentCollection/') ? zip.extractEntryTo('TorrentCollection/', targetFolder + 'TorrentCollection/', false, true) : null;
+                                    // Validate TorrentCollection entries individually
+                                    var tcEntries = zipEntries.filter(function(e) { return e.entryName.startsWith('TorrentCollection/'); });
+                                    var tcTarget = path.resolve(targetFolder, 'TorrentCollection');
+                                    tcEntries.forEach(function(entry) {
+                                        var tcPath = path.resolve(targetFolder, entry.entryName);
+                                        if (tcPath.startsWith(tcTarget + path.sep) || tcPath === tcTarget) {
+                                            zip.extractEntryTo(entry.entryName, targetFolder, true, true);
+                                        }
+                                    });
                                 break;
                             }
                         }

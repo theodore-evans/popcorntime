@@ -166,7 +166,7 @@
 
         updateStatus() {
             var self = this;
-            client.on('status', function (status) {
+            client.once('status', function (status) {
                 self._internalStatusUpdated(status);
             });
         }

@@ -1,0 +1,75 @@
+name: Security Checks
+
+on:
+  push:
+    branches: ['security-hardening', 'development']
+  pull_request:
+    branches: ['security-hardening', 'development']
+
+jobs:
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check for child.exec() usage (command injection)
+        run: |
+          if grep -rn 'child\.exec(' src/; then
+            echo "::error::Found child.exec() usage — use child.execFile() instead"
+            exit 1
+          fi
+
+      - name: Flag .html() calls for review
+        run: |
+          count=$(grep -rn '\.html(' src/app/lib/views/ --include='*.js' | grep -v '\.html()' | grep -v 'node_modules' | wc -l)
+          echo "Found $count .html() calls with arguments in view files (review for XSS)"
+          grep -rn '\.html(' src/app/lib/views/ --include='*.js' | grep -v '\.html()' | grep -v 'node_modules' || true
+
+      - name: Check for sanitize:false in tooltips
+        run: |
+          if grep -rn 'sanitize.*false' src/; then
+            echo "::error::Found sanitize:false — Bootstrap tooltip sanitization must not be disabled"
+            exit 1
+          fi
+
+      - name: Check for inline event handlers in JS
+        run: |
+          if grep -rn 'onclick=\|oncontextmenu=\|onerror=\|onload=' src/app/lib/ --include='*.js'; then
+            echo "::error::Found inline event handlers — use event delegation instead"
+            exit 1
+          fi
+
+      - name: Check for serv00.net URLs
+        run: |
+          if grep -rn 'serv00' gulpfile.js src/; then
+            echo "::error::Found serv00.net URLs — use official dl.nwjs.io CDN"
+            exit 1
+          fi
+
+      - name: Check for unguarded nw.Shell.openExternal
+        run: |
+          count=$(grep -rn 'nw\.Shell\.openExternal' src/ | grep -v 'common.js' | grep -v 'openItem' | wc -l)
+          if [ "$count" -gt 0 ]; then
+            echo "::warning::Found $count unguarded nw.Shell.openExternal calls — use Common.safeOpenExternal()"
+            grep -rn 'nw\.Shell\.openExternal' src/ | grep -v 'common.js' | grep -v 'openItem'
+          fi
+
+      - name: Check for --no-sandbox
+        run: |
+          if grep -rn '\-\-no-sandbox' package.json; then
+            echo "::error::Found --no-sandbox in chromium-args — sandbox must be enabled"
+            exit 1
+          fi
+
+      - name: NPM audit
+        run: npm audit --production --audit-level=high || true

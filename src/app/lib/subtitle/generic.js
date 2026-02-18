@@ -59,6 +59,14 @@
                         try {
                             var zip = new AdmZip(fpath),
                                 zipEntries = zip.getEntries();
+                            // Zip Slip protection: validate all entry paths before extraction
+                            var resolvedTarget = path.resolve(fpath);
+                            for (var zi = 0; zi < zipEntries.length; zi++) {
+                                var entryPath = path.resolve(fpath, zipEntries[zi].entryName);
+                                if (!entryPath.startsWith(resolvedTarget + path.sep) && entryPath !== resolvedTarget) {
+                                    throw new Error('Zip entry has path traversal: ' + zipEntries[zi].entryName);
+                                }
+                            }
                             zip.extractAllTo( /*target path*/ fpath, /*overwrite*/ true);
                             fs.unlink(fpath+ext, function (err) {});
                             var found = findSrt(fpath);
@@ -137,13 +145,19 @@
             try {
                 const srtPath = data.path;
                 const vttPath = srtPath.replace('.srt', '.vtt');
+                var writeStream = fs.createWriteStream(vttPath);
                 fs.createReadStream(srtPath)
                     .pipe(srt2vtt())
-                    .pipe(fs.createWriteStream(vttPath));
-                cb(null, {
-                    vtt: vttPath,
-                    srt: srtPath,
-                    encoding: 'utf8'
+                    .pipe(writeStream);
+                writeStream.on('finish', function() {
+                    cb(null, {
+                        vtt: vttPath,
+                        srt: srtPath,
+                        encoding: 'utf8'
+                    });
+                });
+                writeStream.on('error', function(err) {
+                    cb(err, null);
                 });
             } catch (e) {
                 cb(e, null);

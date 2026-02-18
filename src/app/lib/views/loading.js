@@ -58,7 +58,7 @@
       $('.button:not(#download-torrent, #cancel-button), .show-details .sdo-watch, .sdow-watchnow, .show-details #download-torrent, .file-item, .file-item a, .result-item, .collection-paste, .collection-import, .seedbox .item-play, #torrent-list .item-row, #torrent-show-list .item-row').addClass('disabled');
       $('#watch-now, #watch-trailer, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .seedbox .item-play, #torrent-list .item-play, #torrent-show-list .item-play').prop('disabled', true);
       // If a child was removed from above this view
-      App.vent.on('viewstack:pop', function() {
+      this.listenTo(App.vent, 'viewstack:pop', function() {
         if (_.last(App.ViewStack) === that.className) {
           if ($('.loading .minimize-icon').is(':visible')) {
             that.initKeyboardShortcuts();
@@ -71,7 +71,7 @@
         }
       });
       // If a child was added above this view
-      App.vent.on('viewstack:push', function() {
+      this.listenTo(App.vent, 'viewstack:push', function() {
         if (_.last(App.ViewStack) !== that.className && _.last(App.ViewStack) !== 'notificationWrapper') {
           that.unbindKeyboardShortcuts();
         }
@@ -367,11 +367,9 @@
       var reserved = (size * 20) / 100;
       reserved = reserved > 0.25 ? 0.25 : reserved;
       var minspace = size + reserved;
-      var cmd;
       if (process.platform === 'win32') {
         var drive = Settings.tmpLocation.substr(0, 2);
-        cmd = 'dir /-C ' + drive;
-        child.exec(cmd, function(error, stdout, stderr) {
+        child.execFile('cmd', ['/c', 'dir', '/-C', drive], function(error, stdout, stderr) {
           if (error) {
             return;
           }
@@ -386,21 +384,28 @@
           }
         });
       } else {
-        var path = Settings.tmpLocation;
-        cmd = 'df -Pk "' + path + '" | awk \'NR==2 {print $4}\'';
-        child.exec(cmd, function(error, stdout, stderr) {
+        var tmpPath = Settings.tmpLocation;
+        child.execFile('df', ['-Pk', tmpPath], function(error, stdout, stderr) {
           if (error) {
             return;
           }
-          var freespace = stdout.replace(/\D/g, '') / (1024 * 1024);
-          if (freespace < minspace) {
-            $('#player .warning-nospace').css('display', 'block');
+          var lines = stdout.trim().split('\n');
+          if (lines.length >= 2) {
+            var available = lines[1].split(/\s+/)[3];
+            var freespace = parseInt(available, 10) / (1024 * 1024);
+            if (!isNaN(freespace) && freespace < minspace) {
+              $('#player .warning-nospace').css('display', 'block');
+            }
           }
         });
       }
     },
 
     onBeforeDestroy: function() {
+      if (this.extPlayerStatusUpdater) {
+        clearInterval(this.extPlayerStatusUpdater);
+        this.extPlayerStatusUpdater = null;
+      }
       $('.filter-bar').show();
       $('#header').removeClass('header-shadow');
       $('.button:not(#cancel-button), #watch-now, .show-details .sdo-watch, .sdow-watchnow, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .trash-torrent, .collection-paste, .collection-import, .seedbox .item-play, .seedbox .exit-when-done, #torrent-list .item-row, #torrent-show-list .item-row, #torrent-list .item-play, #torrent-show-list .item-play').removeClass('disabled').removeProp('disabled');

@@ -470,7 +470,7 @@
     },
 
     showHelp: function(e) {
-      nw.Shell.openExternal(Settings.projectBlog + '/FAQ');
+      Common.safeOpenExternal(Settings.projectBlog + '/FAQ');
     },
 
     preventDefault: function(e) {
@@ -682,7 +682,7 @@
 
     links: function(e) {
       e.preventDefault();
-      nw.Shell.openExternal($(e.currentTarget).attr('href'));
+      Common.safeOpenExternal($(e.currentTarget).attr('href'));
     },
 
     restartButter: function() {

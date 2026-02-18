@@ -122,60 +122,58 @@
     };
 
     var formatForButter = function (items, kind) {
-        var movieList = [];
-        var WseriesList = [];
-
-        items.forEach(function (movie) {
-            var movie_fetch_func = Database.getMovie;
-            var show_fetch_func = Database.getTVShowByImdb;
-            var shouldMark = true;
-            // note: in the future we could check if the movie is also in
-            // the local db to avoid fetching data we already have
-            if (kind === 'Watched') {
-                shouldMark = false;
+        if (kind === 'Watched') {
+            // Watched path: use external fetch wrappers (one at a time, can't batch)
+            var movieList = [];
+            var WseriesList = [];
+            items.forEach(function (movie) {
                 if (movie.type === 'movie') {
                     movie.imdb_id = movie.movie_id;
-                }
-                // if we're displaying movies from the watched database
-                // we'll fetch them from the providers instead of the local database
-                // given that storing them there would make the movie database
-                // very large
-                movie_fetch_func = movie_fetch_wrapper;
-                show_fetch_func = show_fetch_wrapper;
-            }
-            // we check if its a movie
-            // or tv show then we extract right data
-            if (movie.type === 'movie') {
-                // its a movie
-                const promise = movie_fetch_func(movie.imdb_id).then(function (data) {
-                    if (data && shouldMark) {
-                        data.type = 'bookmarkedmovie';
-                    }
-                    return data;
-                });
-                movieList.push(promise);
-            } else {
-                // its a tv show
-                if (kind === 'Watched') {
-                    // process only one instance of series
+                    movieList.push(movie_fetch_wrapper(movie.imdb_id));
+                } else {
                     if (WseriesList.includes(movie.imdb_id)) {
                         return;
                     }
                     WseriesList.push(movie.imdb_id);
+                    movieList.push(show_fetch_wrapper(movie.imdb_id).then(function (data) {
+                        data ? data.imdb = data.imdb_id : null;
+                        data ? data.poster = data.images.poster : null;
+                        return data;
+                    }));
                 }
-                const promise = show_fetch_func(movie.imdb_id).then(function (data) {
-                    if (data && shouldMark) {
-                        data.type = 'bookmarkedshow';
-                    }
-                    data ? data.imdb = data.imdb_id : null;
-                    data ? data.poster = data.images.poster : null;
-                    return data;
-                });
-                movieList.push(promise);
+            });
+            return Promise.all(movieList).then(values => values.filter(v => v));
+        }
+
+        // Bookmarks path: batch fetch from local database
+        var movieIds = [];
+        var showIds = [];
+        items.forEach(function (item) {
+            if (item.type === 'movie') {
+                movieIds.push(item.imdb_id);
+            } else {
+                showIds.push(item.imdb_id);
             }
         });
 
-        return Promise.all(movieList).then(values => values.filter(v => v));
+        return Promise.all([
+            movieIds.length > 0 ? Database.getMoviesByIds(movieIds) : Promise.resolve([]),
+            showIds.length > 0 ? Database.getTVShowsByIds(showIds) : Promise.resolve([])
+        ]).then(function (results) {
+            var movies = results[0].map(function (data) {
+                if (data) { data.type = 'bookmarkedmovie'; }
+                return data;
+            });
+            var shows = results[1].map(function (data) {
+                if (data) {
+                    data.type = 'bookmarkedshow';
+                    data.imdb = data.imdb_id;
+                    data.poster = data.images ? data.images.poster : null;
+                }
+                return data;
+            });
+            return movies.concat(shows).filter(v => v);
+        });
     };
 
     Favorites.prototype.extractIds = function (items) {

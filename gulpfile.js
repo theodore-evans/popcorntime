@@ -184,8 +184,8 @@ const nw = new nwBuilder({
   macIcns: './src/app/images/butter.icns',
   version: nwVersion,
   flavor: nwFlavor,
-  manifestUrl: 'https://popcorn-time.serv00.net/version.json',
-  downloadUrl: 'https://popcorn-time.serv00.net/nw/',
+  manifestUrl: 'https://nwjs.io/versions.json',
+  downloadUrl: 'https://dl.nwjs.io/',
   platforms: parsePlatforms()
 }).on('log', console.log);
 

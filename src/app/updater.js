@@ -39,7 +39,7 @@
         if (latestVer > currentVer) {
             let downloadUpdate = function () {
                 App.vent.trigger('notification:close');
-                nw.Shell.openExternal(Settings.projectUrl);
+                Common.safeOpenExternal(Settings.projectUrl);
                 win.close();
             };
             let dontUpdate = function () {
@@ -89,7 +89,13 @@
                 let data = AdvSettings.get('dhtData');
                 let newData = node.v.toString();
                 let info = AdvSettings.get('dhtInfo');
-                let newInfo = typeof newData === 'string' ? JSON.parse(newData) : null;
+                let newInfo;
+                try {
+                    newInfo = typeof newData === 'string' ? JSON.parse(newData) : null;
+                } catch(e) {
+                    win.warn('DHT: malformed JSON payload, ignoring');
+                    return;
+                }
                 AdvSettings.set('dhtData', newData);
                 AdvSettings.set('dhtDataUpdated', Date.now());
                 if (e !== 'urls'){

@@ -54,10 +54,10 @@
             } else {
                 fs.readFile('./CHANGELOG.md', 'utf-8', function (err, contents) {
                     if (!err) {
-                        $('.changelog-text').html(contents.replace(/\n/g, '<br />'));
+                        $('.changelog-text').css('white-space', 'pre-wrap').text(contents);
                         $('.changelog-overlay').show();
                     } else {
-                        nw.Shell.openExternal(Settings.changelogUrl);
+                        Common.safeOpenExternal(Settings.changelogUrl);
                     }
                 });
             }

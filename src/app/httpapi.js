@@ -16,7 +16,7 @@
         return new Promise(function (resolve, reject) {
             server = rpc.Server({
                 'headers': { // allow custom headers is empty by default
-                    'Access-Control-Allow-Origin': '*'
+                    'Access-Control-Allow-Origin': 'http://127.0.0.1'
                 }
             });
 
@@ -323,7 +323,7 @@
             server.expose('setplayer', function (args, opt, callback) {
                 args = Object.values(args);
                 if (args.length > 0) {
-                    var el = $('.playerchoicemenu li#player-' + args[0] + ' a');
+                    var el = $('.playerchoicemenu li').filter(function() { return this.id === 'player-' + args[0]; }).find('a');
                     if (el.length > 0) {
                         App.Device.Collection.setDevice(args[0]);
                         $('.playerchoicemenu li a.active').removeClass('active');
@@ -796,7 +796,7 @@
     var sockets = [];
 
     function startListening() {
-        httpServer = server.listen(Settings.httpApiPort);
+        httpServer = server.listen(Settings.httpApiPort, '127.0.0.1');
 
         httpServer.on('connection', function (socket) {
             sockets.push(socket);
