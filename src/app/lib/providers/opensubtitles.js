@@ -49,7 +49,8 @@
 
         data = normalizeLangCodes(data);
         for (var lang in data) {
-            data[lang] = data[lang].url;
+            // prefer VTT URL for HTML5 <track> compatibility, fall back to SRT
+            data[lang] = data[lang].vtt || data[lang].url;
         }
 
         win.info(Object.keys(data).length + ' subtitles found');

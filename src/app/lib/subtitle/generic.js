@@ -33,7 +33,7 @@
             request.get(furl).on('response', function (response) {
                 var rtype = (response.headers['content-type'] || '').split(';')[0].trim(); // response type
                 var cdisp = (response.headers['content-disposition'] || ''); // content disposition
-                var fgz,fzip,fsrt;
+                var fgz,fzip,fvtt,fsrt;
                 var ext;
 
                 if (rtype.match('gz') || cdisp.match('gz')) {
@@ -44,16 +44,22 @@
                     // zipped file
                     ext = '.zip';
                     fzip = true;
+                } else if (rtype.match('vtt') || cdisp.match('vtt') || furl.match('subformat-vtt')) {
+                    // vtt subtitle
+                    ext = '.vtt';
+                    fvtt = true;
                 } else if (rtype.match('srt') || cdisp.match('srt')) {
                     // srt subtitle
                     ext = '.srt';
                     fsrt = true;
                 } else {
-                    reject(new Error('Subtitle: response error, file is not gz,zip,srt'));
+                    reject(new Error('Subtitle: response error, file is not gz,zip,vtt,srt'));
                 }
 
                 var fileStream = fs.createWriteStream(fpath+ext).on('finish', function () {
-                    if (fsrt) {
+                    if (fvtt) {
+                        resolve(fpath+ext);
+                    } else if (fsrt) {
                         resolve(fpath+ext);
                     } else if (fzip) {
                         try {
@@ -144,6 +150,15 @@
         convert: function (data, cb) { // Converts .srt's to .vtt's
             try {
                 const srtPath = data.path;
+                // if already VTT, no conversion needed
+                if (path.extname(srtPath) === '.vtt') {
+                    cb(null, {
+                        vtt: srtPath,
+                        srt: srtPath,
+                        encoding: 'utf8'
+                    });
+                    return;
+                }
                 const vttPath = srtPath.replace('.srt', '.vtt');
                 var writeStream = fs.createWriteStream(vttPath);
                 fs.createReadStream(srtPath)
