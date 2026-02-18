@@ -75,8 +75,9 @@
 
                 torrentProvider.loading = true;
                 return getDataFromProvider(providers, self)
-                    .then(function () { torrentProvider.loading = false; })
+                    .then(function (data) { torrentProvider.loading = false; return data; })
                     .then(function (torrents) {
+                        if (!torrents || !torrents.results) { return; }
                         // set state, can't fail
                         if (torrents.results.length !== 0) {
                             torrentProvider.page++;
