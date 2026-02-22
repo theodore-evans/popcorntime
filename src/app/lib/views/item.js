@@ -282,6 +282,11 @@
                     return Object.assign (a, c);
                 }, {});
 
+                if (results.length === 0 || (itemtype === 'show' && !data.episodes) || (itemtype === 'movie' && !data.torrents)) {
+                    win.warn('Detail data incomplete for', id, '- missing:', itemtype === 'show' ? 'episodes' : 'torrents');
+                    $('.notification_alert').text(i18n.__('Error loading data, try again later...')).fadeIn('fast').delay(2500).fadeOut('fast');
+                }
+
                 // load details
                 App.vent.trigger(itemtype + ':showDetail', this.model.set(data));
             }.bind(this))

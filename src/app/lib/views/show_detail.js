@@ -112,6 +112,11 @@
         },
 
         initTorrents: function (episodes) {
+            if (!episodes || !episodes.length) {
+                this.model.set('torrents', {});
+                this.model.set('seasonCount', 0);
+                return;
+            }
             for (let i = 0; i < episodes.length; i++) {
                 if (!episodes[i].title) {
                     episodes[i].title = 'Untitled';
